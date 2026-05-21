@@ -1,5 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { useSpecialty } from '../contexts/SpecialtyContext'
+import { SPECIALTIES } from '../config/specialties'
 
 const NAV = [
   { to: '/', icon: '📅', label: 'Scheduler' },
@@ -7,6 +9,7 @@ const NAV = [
   { to: '/intake', icon: '📋', label: 'Intake' },
   { to: '/soap', icon: '📝', label: 'SOAP Notes' },
   { to: '/contacts', icon: '👥', label: 'Contacts' },
+  { to: '/insurance', icon: '🏥', label: 'Insurance' },
   { to: '/reactivation', icon: '🔄', label: 'Reactivation' },
   { to: '/stats', icon: '📊', label: 'Stats & P&L' },
   { to: '/checkin', icon: '✅', label: 'Check-In' },
@@ -22,6 +25,7 @@ export default function Layout() {
   const [darkMode, setDarkMode] = useState(true)
   const [office, setOffice] = useState(() => localStorage.getItem('activeOffice') || 'Rogers')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { specialty, config, changeSpecialty } = useSpecialty()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
@@ -39,10 +43,10 @@ export default function Layout() {
       `}>
         <div className="p-4 border-b border-gray-800">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🏥</span>
+            <span className="text-2xl">{config.icon}</span>
             <div>
               <div className="font-bold text-teal-400 text-sm leading-tight">ChiroDesk</div>
-              <div className="text-xs text-gray-500">by Hiatt</div>
+              <div className="text-xs text-gray-500">{config.label}</div>
             </div>
           </div>
         </div>
@@ -81,8 +85,22 @@ export default function Layout() {
           </div>
         </nav>
 
+        {/* Specialty Selector */}
+        <div className="p-3 border-t border-gray-800">
+          <p className="text-xs text-gray-600 uppercase tracking-wide mb-2">Specialty</p>
+          <div className="grid grid-cols-5 gap-1">
+            {Object.entries(SPECIALTIES).map(([key, spec]) => (
+              <button key={key} title={spec.label} onClick={() => changeSpecialty(key)}
+                className={`text-lg p-1 rounded transition ${specialty === key ? 'bg-teal-600/30 ring-1 ring-teal-500' : 'hover:bg-gray-800'}`}>
+                {spec.icon}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-teal-500 mt-1">{config.icon} {config.label}</p>
+        </div>
+
         <div className="p-3 border-t border-gray-800 text-xs text-gray-600 text-center">
-          ChiroDesk by Hiatt v1.0
+          ChiroDesk by Hiatt v3.0
         </div>
       </aside>
 

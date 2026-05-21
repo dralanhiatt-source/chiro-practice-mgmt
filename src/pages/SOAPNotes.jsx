@@ -4,6 +4,7 @@ import PinProtect from '../components/PinProtect'
 import PainSlider from '../components/PainSlider'
 import SignatureCanvas from '../components/SignatureCanvas'
 import VoiceDictation from '../components/VoiceDictation'
+import { useSpecialty } from '../contexts/SpecialtyContext'
 
 const COMPLAINTS = ['Neck','Upper Back','Mid Back','Low Back','Headache','Shoulder','Hip','Knee','Foot/Ankle','Numbness/Tingling','Other']
 const POSTURE = ['Antalgic lean R','Antalgic lean L','Forward head','Elevated shoulder R','Elevated shoulder L','Elevated hip R','Elevated hip L','Normal']
@@ -97,15 +98,139 @@ function PatientSearchModal({ patients, onSelect, onClose }) {
   )
 }
 
+function SuperbillModal({ form, patient, settings, onClose }) {
+  const CPT_CHARGES = { '98940': 55, '98941': 75, '98942': 95, '97012': 25, '97110': 45, '97530': 45, '97035': 30, '97014': 25 }
+  const cptRows = (form.cptCodes || []).map(entry => {
+    const code = entry.split(' - ')[0]
+    const desc = entry.split(' - ').slice(1).join(' - ')
+    const charge = CPT_CHARGES[code] || 50
+    return { code, desc, charge }
+  })
+  const total = cptRows.reduce((s, r) => s + r.charge, 0)
+  const address = form.office === 'Eureka' ? settings.addressEureka : settings.addressRogers
+  const insurance = JSON.parse(localStorage.getItem('patientInsurance') || '{}')[patient?.id]
+  const ins = insurance?.primary || {}
+
+  const sendWhatsApp = () => {
+    const msg = `Superbill attached — ${patient?.firstName} ${patient?.lastName} ${form.date}`
+    fetch('http://localhost:3000/send', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ message: msg }) })
+      .catch(() => {})
+    alert('WhatsApp message queued: ' + msg)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-white text-gray-900 rounded-xl p-8 max-w-2xl w-full my-4 superbill-print">
+        <div className="flex justify-between items-start mb-6 no-print">
+          <h2 className="text-xl font-bold text-gray-800">Superbill Preview</h2>
+          <div className="flex gap-2">
+            <button onClick={() => window.print()} className="bg-teal-600 text-white px-3 py-1.5 text-sm rounded">🖨️ Print</button>
+            <button onClick={sendWhatsApp} className="bg-green-600 text-white px-3 py-1.5 text-sm rounded">📱 WhatsApp</button>
+            <button onClick={onClose} className="bg-gray-200 text-gray-700 px-3 py-1.5 text-sm rounded">Close</button>
+          </div>
+        </div>
+
+        <div className="border-b-2 border-gray-900 pb-4 mb-4">
+          <h1 className="text-2xl font-bold">Dr. Alan Hiatt, DC</h1>
+          <p className="text-sm text-gray-600">{address}</p>
+          {settings.npi1 && <p className="text-sm">NPI: {settings.npi1}</p>}
+          {settings.taxId && <p className="text-sm">Tax ID: {settings.taxId}</p>}
+        </div>
+
+        <div className="text-center mb-4">
+          <h2 className="text-xl font-bold uppercase tracking-wide">SUPERBILL</h2>
+          <p className="text-sm text-gray-600">Date of Service: {form.date}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+          <div>
+            <strong>Patient:</strong> {patient?.firstName} {patient?.lastName}<br />
+            <strong>DOB:</strong> {patient?.dob || 'N/A'}<br />
+            <strong>Insurance ID:</strong> {ins.memberId || 'N/A'}
+          </div>
+          <div>
+            <strong>Subscriber:</strong> {ins.subscriberName || 'N/A'}<br />
+            <strong>Insurance:</strong> {ins.payerName || 'N/A'}<br />
+            <strong>Group:</strong> {ins.groupNumber || 'N/A'}
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <h3 className="font-bold border-b border-gray-400 pb-1 mb-2">Services Rendered</h3>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-600">
+                <th className="py-1 pr-3">CPT Code</th>
+                <th className="py-1 pr-3">Description</th>
+                <th className="py-1 pr-3">Modifier</th>
+                <th className="py-1 pr-3">Units</th>
+                <th className="py-1 text-right">Charge</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cptRows.map(r => (
+                <tr key={r.code} className="border-b border-gray-200">
+                  <td className="py-1 pr-3 font-mono">{r.code}</td>
+                  <td className="py-1 pr-3">{r.desc}</td>
+                  <td className="py-1 pr-3 font-mono text-xs">{['98940','98941','98942'].includes(r.code) && ins.payerName?.includes('Medicare') ? 'AT' : ''}</td>
+                  <td className="py-1 pr-3">1</td>
+                  <td className="py-1 text-right">${r.charge}</td>
+                </tr>
+              ))}
+              <tr className="font-bold border-t-2 border-gray-400">
+                <td colSpan={4} className="py-2">Total Charges</td>
+                <td className="py-2 text-right">${total}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {(form.icd10Codes || []).length > 0 && (
+          <div className="mb-4">
+            <h3 className="font-bold border-b border-gray-400 pb-1 mb-2">Diagnosis Codes</h3>
+            <div className="text-sm space-y-0.5">
+              {form.icd10Codes.map(c => <div key={c} className="font-mono">{c}</div>)}
+            </div>
+          </div>
+        )}
+
+        <div className="border-t border-gray-300 pt-4 text-xs text-gray-500 mb-4">
+          This is not a bill — provided for insurance reimbursement purposes only.
+          Services may be HSA/FSA eligible.
+        </div>
+
+        <div className="flex justify-between items-end">
+          <div>
+            <p className="text-sm"><strong>Provider Signature:</strong> Dr. Alan Hiatt, DC</p>
+            <div className="border-b border-gray-400 w-48 mt-4 mb-1" />
+            <p className="text-xs text-gray-500">Signature</p>
+          </div>
+          <div>
+            <p className="text-sm"><strong>Date:</strong> _______________</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function SOAPNotes() {
   const [patients] = useLocalStorage('patients', [])
   const [soapNotes, setSoapNotes] = useLocalStorage('soapNotes', [])
+  const [practiceSettings] = useLocalStorage('practiceSettings', {})
   const [form, setForm] = useState({ ...BLANK_SOAP, date: new Date().toISOString().split('T')[0], time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
   const [selectedPatient, setSelectedPatient] = useState(null)
   const [showPatientSearch, setShowPatientSearch] = useState(false)
   const [saved, setSaved] = useState(false)
   const [expandedNote, setExpandedNote] = useState(null)
   const [icd10Search, setIcd10Search] = useState('')
+  const [showSuperbill, setShowSuperbill] = useState(false)
+  const { specialty, config } = useSpecialty()
+
+  // Session note state (massage)
+  const [sessionNote, setSessionNote] = useState({ areas: '', pressure: 'Medium', technique: '', notes: '' })
+  // DAP note state (mental health)
+  const [dapNote, setDapNote] = useState({ data: '', assessment: '', plan: '' })
 
   useEffect(() => {
     if (selectedPatient) {
@@ -158,14 +283,27 @@ export default function SOAPNotes() {
     <PinProtect storageKey="soapPin">
       <div className="space-y-6 max-w-4xl mx-auto">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <h1 className="text-2xl font-bold">📝 SOAP Notes</h1>
-          <div className="flex gap-2">
+          <h1 className="text-2xl font-bold">📝 {config.noteType} Notes <span className="text-base text-gray-500">{config.icon} {config.label}</span></h1>
+          <div className="flex gap-2 flex-wrap">
             <button onClick={exportPDF} className="no-print bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm px-4 py-2 rounded-lg">🖨️ Export PDF</button>
             <button onClick={saveNote} className={`no-print text-sm px-4 py-2 rounded-lg font-medium transition ${saved ? 'bg-green-600 text-white' : 'bg-teal-600 hover:bg-teal-700 text-white'}`}>
               {saved ? '✓ Saved!' : '💾 Save Note'}
             </button>
+            {specialty === 'chiro' && (
+              <button onClick={() => setShowSuperbill(true)} className="no-print bg-purple-700 hover:bg-purple-600 text-white text-sm px-4 py-2 rounded-lg">
+                🧾 Superbill
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Mental Health Crisis Banner */}
+        {config.showCrisisLine && (
+          <div className="bg-red-900/40 border border-red-600 rounded-lg p-3 text-red-300 text-sm flex items-center gap-3">
+            <span className="text-xl">🚨</span>
+            <span>Crisis Line: <strong>988</strong> (Suicide & Crisis Lifeline) | Text HOME to 741741 (Crisis Text Line)</span>
+          </div>
+        )}
 
         {/* Patient selector */}
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
@@ -272,11 +410,77 @@ export default function SOAPNotes() {
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
           <h2 className="text-lg font-semibold text-teal-400 mb-4">A — Assessment</h2>
 
-          {/* CPT Code Quick-Pick */}
+          {/* Specialty-aware note sections */}
+          {specialty === 'massage' && (
+            <div className="space-y-4 mb-4">
+              <div className="bg-purple-900/30 border border-purple-700 rounded-lg p-4">
+                <h3 className="text-purple-300 font-medium mb-3">Session Note</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Areas Worked</label>
+                    <input value={sessionNote.areas} onChange={e => setSessionNote(n => ({ ...n, areas: e.target.value }))}
+                      placeholder="Back, shoulders, neck..."
+                      className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Pressure Preference</label>
+                    <select value={sessionNote.pressure} onChange={e => setSessionNote(n => ({ ...n, pressure: e.target.value }))}
+                      className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600">
+                      {['Light','Medium','Deep','Mixed'].map(p => <option key={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Technique Used</label>
+                    <input value={sessionNote.technique} onChange={e => setSessionNote(n => ({ ...n, technique: e.target.value }))}
+                      placeholder="Swedish, Deep Tissue, Trigger Point..."
+                      className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Notes / Contraindications</label>
+                    <input value={sessionNote.notes} onChange={e => setSessionNote(n => ({ ...n, notes: e.target.value }))}
+                      className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {specialty === 'mental' && (
+            <div className="space-y-4 mb-4">
+              <div className="bg-indigo-900/30 border border-indigo-700 rounded-lg p-4">
+                <h3 className="text-indigo-300 font-medium mb-3">DAP Note</h3>
+                {[['data','D — Data (client statements, behaviors, objective info)'],['assessment','A — Assessment (clinician interpretation, progress)'],['plan','P — Plan (interventions, homework, next session)']].map(([key, label]) => (
+                  <div key={key} className="mb-3">
+                    <label className="text-xs text-gray-400 mb-1 block">{label}</label>
+                    <textarea value={dapNote[key]} onChange={e => setDapNote(n => ({ ...n, [key]: e.target.value }))} rows={3}
+                      className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600 resize-none" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {specialty === 'acupuncture' && (
+            <div className="space-y-4 mb-4">
+              <div className="bg-orange-900/30 border border-orange-700 rounded-lg p-4">
+                <h3 className="text-orange-300 font-medium mb-3">TCM Assessment</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[['tongueDiag','Tongue Diagnosis'],['pulseDiag','Pulse Diagnosis'],['pattern','TCM Pattern']].map(([key, label]) => (
+                    <div key={key}>
+                      <label className="text-xs text-gray-400 mb-1 block">{label}</label>
+                      <input className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CPT Code Quick-Pick — filtered by specialty */}
           <div className="mb-4">
             <label className="text-sm text-gray-400 mb-2 block">CPT Code Quick-Pick</label>
             <div className="flex flex-wrap gap-2 mb-2">
-              {CPT_CODES.map(cpt => (
+              {CPT_CODES.filter(cpt => config.cptCodes.length === 0 || config.cptCodes.includes(cpt.code)).map(cpt => (
                 <button key={cpt.code} type="button" onClick={() => addCPT(cpt)}
                   className="border border-teal-500 text-teal-400 text-xs rounded px-2 py-1 font-mono hover:bg-teal-900">
                   {cpt.code}
@@ -323,22 +527,27 @@ export default function SOAPNotes() {
             )}
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block">Subluxations</label>
-              <div className="flex flex-wrap gap-2">
-                {SPINE.map(s => (
-                  <Toggle key={s} label={s} active={form.assessment.subluxations.includes(s)} onClick={() => updateA('subluxations', toggleArr(form.assessment.subluxations, s))} small />
-                ))}
+          {/* Subluxations and Techniques — chiro only */}
+          {config.showSubgraph && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Subluxations</label>
+                <div className="flex flex-wrap gap-2">
+                  {SPINE.map(s => (
+                    <Toggle key={s} label={s} active={form.assessment.subluxations.includes(s)} onClick={() => updateA('subluxations', toggleArr(form.assessment.subluxations, s))} small />
+                  ))}
+                </div>
               </div>
+              {config.showTechniques && (
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Techniques Used</label>
+                  <div className="flex flex-wrap gap-2">
+                    {TECHNIQUES.map(t => <Toggle key={t} label={t} active={form.assessment.techniques.includes(t)} onClick={() => updateA('techniques', toggleArr(form.assessment.techniques, t))} />)}
+                  </div>
+                </div>
+              )}
             </div>
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block">Techniques Used</label>
-              <div className="flex flex-wrap gap-2">
-                {TECHNIQUES.map(t => <Toggle key={t} label={t} active={form.assessment.techniques.includes(t)} onClick={() => updateA('techniques', toggleArr(form.assessment.techniques, t))} />)}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* PLAN */}
@@ -406,6 +615,10 @@ export default function SOAPNotes() {
 
         {showPatientSearch && (
           <PatientSearchModal patients={patients} onSelect={p => { setSelectedPatient(p); setShowPatientSearch(false) }} onClose={() => setShowPatientSearch(false)} />
+        )}
+
+        {showSuperbill && (
+          <SuperbillModal form={form} patient={selectedPatient} settings={practiceSettings} onClose={() => setShowSuperbill(false)} />
         )}
       </div>
     </PinProtect>
