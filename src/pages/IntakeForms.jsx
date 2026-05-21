@@ -13,12 +13,14 @@ const DURATIONS = ['Less than 1 week','1-4 weeks','1-3 months','3-6 months','6+ 
 const CONDITIONS = ['Heart condition','Osteoporosis','Recent surgery','Cancer history','Blood thinners','Diabetes','Pregnancy','Pacemaker','None']
 const CAUSES = ['Auto accident','Work injury','Sports injury','Slip and fall','No specific cause','Other']
 const OFFICES = ['Rogers','Eureka Springs']
+const REFERRAL_SOURCES = ['Google','Friend','Facebook','Instagram','Existing patient','Other']
 
 const BLANK = {
   firstName: '', lastName: '', dob: '', phone: '', email: '', address: '',
   emergencyName: '', emergencyPhone: '', complaints: [], painLevel: 5,
   duration: '', prevCare: '', medications: '', conditions: [], cause: '',
   hipaaSignature: null, consentText: false, office: 'Rogers', lang: 'en',
+  referralSource: '', referralName: '',
 }
 
 export default function IntakeForms() {
@@ -102,6 +104,11 @@ export default function IntakeForms() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* HSA/FSA Banner */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+          💳 Chiropractic care is HSA and FSA eligible. Pay with your health savings card.
+        </div>
+
         {/* Office selector */}
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
           <label className="text-sm font-medium text-gray-300 block mb-2">{t('common.office')}</label>
@@ -242,6 +249,21 @@ export default function IntakeForms() {
               </label>
             ))}
           </div>
+        </div>
+
+        {/* Referral Source */}
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <h2 className="font-semibold text-gray-300 mb-3">How did you hear about us?</h2>
+          <select value={form.referralSource} onChange={e => setForm({ ...form, referralSource: e.target.value, referralName: '' })}
+            className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600 mb-3">
+            <option value="">Select one...</option>
+            {REFERRAL_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          {(form.referralSource === 'Friend' || form.referralSource === 'Existing patient') && (
+            <input value={form.referralName} onChange={e => setForm({ ...form, referralName: e.target.value })}
+              placeholder={form.referralSource === 'Friend' ? "Friend's name" : "Patient's name"}
+              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600" />
+          )}
         </div>
 
         {/* HIPAA */}

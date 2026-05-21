@@ -39,7 +39,7 @@ export default function Layout() {
       `}>
         <div className="p-4 border-b border-gray-800">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🦴</span>
+            <span className="text-2xl">🏥</span>
             <div>
               <div className="font-bold text-teal-400 text-sm leading-tight">ChiroDesk</div>
               <div className="text-xs text-gray-500">by Hiatt</div>

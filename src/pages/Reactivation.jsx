@@ -110,6 +110,28 @@ export default function Reactivation() {
       {list.map(p => {
         const key = `${p.id}_${type}`
         const sent = reactivationLog[key]?.sent
+
+        // Smart Google Review Logic
+        let showReviewBtn = true
+        let reviewNote = ''
+        if (type === 'review') {
+          const patientNotes = soapNotes.filter(n => n.patientId === p.id).sort((a, b) => a.date?.localeCompare(b.date))
+          if (patientNotes.length < 2) {
+            showReviewBtn = true
+            reviewNote = '(< 2 visits — showing anyway)'
+          } else {
+            const firstPain = patientNotes[0]?.subjective?.painLevel
+            const lastPain = patientNotes[patientNotes.length - 1]?.subjective?.painLevel
+            if (firstPain !== undefined && lastPain !== undefined) {
+              const improvement = firstPain - lastPain
+              showReviewBtn = improvement >= 3
+              if (!showReviewBtn) reviewNote = `Pain improved only ${improvement} pts`
+            } else {
+              reviewNote = '(no pain data)'
+            }
+          }
+        }
+
         return (
           <div key={p.id} className="flex items-center justify-between bg-gray-800 rounded-lg p-3 flex-wrap gap-2">
             <div>
@@ -119,10 +141,21 @@ export default function Reactivation() {
             </div>
             <div className="flex items-center gap-2">
               {sent && <span className="text-xs text-green-400">✓ Sent</span>}
-              <button onClick={() => openCompose(p, type)}
-                className="bg-teal-600 hover:bg-teal-700 text-white text-xs px-3 py-1.5 rounded-lg">
-                📱 Send Text
-              </button>
+              {type === 'review' ? (
+                showReviewBtn ? (
+                  <button onClick={() => openCompose(p, type)}
+                    className="bg-teal-600 hover:bg-teal-700 text-white text-xs px-3 py-1.5 rounded-lg">
+                    📱 Send Review Request
+                  </button>
+                ) : (
+                  <span className="text-xs text-gray-500">{reviewNote}</span>
+                )
+              ) : (
+                <button onClick={() => openCompose(p, type)}
+                  className="bg-teal-600 hover:bg-teal-700 text-white text-xs px-3 py-1.5 rounded-lg">
+                  📱 Send Text
+                </button>
+              )}
             </div>
           </div>
         )

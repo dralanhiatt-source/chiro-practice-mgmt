@@ -1,13 +1,16 @@
+const PAIN_EMOJI = ['😊','🙂','😐','😕','😟','😣','😖','😫','😩','😢','😰']
+
 export default function PainSlider({ value, onChange, size = 'normal' }) {
   const colors = ['', '#22c55e','#4ade80','#86efac','#bbf7d0','#fde68a','#fbbf24','#f97316','#ef4444','#dc2626','#991b1b']
-  const labels = ['', 'Min','','','','Moderate','','','','','Max']
   const big = size === 'large'
+  const painEmoji = PAIN_EMOJI[value] || '😊'
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3">
         <span className={`font-bold ${big ? 'text-4xl' : 'text-2xl'}`} style={{ color: colors[value] || '#9ca3af' }}>
           {value}/10
         </span>
+        <span className={`${big ? 'text-4xl' : 'text-2xl'}`}>{painEmoji}</span>
         <span className="text-gray-400 text-sm">
           {value === 0 ? 'No pain' : value <= 3 ? 'Mild' : value <= 6 ? 'Moderate' : value <= 8 ? 'Severe' : 'Extreme'}
         </span>

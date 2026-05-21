@@ -13,7 +13,7 @@ export default function Sign() {
 
       <div className="max-w-2xl w-full border-4 border-teal-600 rounded-2xl p-10 text-center">
         {/* Header */}
-        <div className="text-5xl mb-3">🦴</div>
+        <div className="text-5xl mb-3">🏥</div>
         <h1 className="text-4xl font-bold text-teal-700 mb-2">Welcome to Dr. Hiatt's Office</h1>
         <p className="text-lg text-gray-600 mb-2">Chiropractic Care — Rogers & Eureka Springs</p>
         <div className="w-24 h-1 bg-teal-500 mx-auto mb-8 rounded-full"></div>

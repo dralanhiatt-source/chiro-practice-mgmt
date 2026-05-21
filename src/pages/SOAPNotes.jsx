@@ -16,12 +16,48 @@ const NEXT_VISIT = ['1 day','2 days','3 days','1 week','2 weeks','1 month','As n
 const TX_PLANS = ['Acute 3x/wk','Sub-acute 2x/wk','Maintenance 1x/wk','Wellness monthly','Custom']
 const COMPARED = ['Much better','Better','Same','Worse','Much worse','First visit']
 
+const CPT_CODES = [
+  { code: '98940', desc: 'Chiro 1-2 regions' },
+  { code: '98941', desc: 'Chiro 3-4 regions' },
+  { code: '98942', desc: 'Chiro 5 regions' },
+  { code: '97012', desc: 'Mech traction' },
+  { code: '97110', desc: 'Therapeutic exercise' },
+  { code: '97530', desc: 'Therapeutic activities' },
+  { code: '97035', desc: 'Ultrasound' },
+  { code: '97014', desc: 'E-stim' },
+]
+
+const ICD10_CODES = [
+  { code: 'M54.5', desc: 'Low back pain' },
+  { code: 'M54.2', desc: 'Cervicalgia' },
+  { code: 'M47.816', desc: 'Spondylosis lumbar' },
+  { code: 'M47.812', desc: 'Spondylosis cervical' },
+  { code: 'M54.3', desc: 'Sciatica' },
+  { code: 'M54.4', desc: 'Lumbago with sciatica' },
+  { code: 'G44.309', desc: 'Headache unspecified' },
+  { code: 'M79.3', desc: 'Panniculitis' },
+  { code: 'M99.01', desc: 'Subluxation cervical' },
+  { code: 'M99.03', desc: 'Subluxation lumbar' },
+  { code: 'S13.4', desc: 'Whiplash' },
+  { code: 'M50.1', desc: 'Cervical disc degeneration' },
+  { code: 'M51.1', desc: 'Lumbar disc degeneration' },
+  { code: 'M62.838', desc: 'Muscle spasm' },
+  { code: 'R52', desc: 'Chronic pain' },
+  { code: 'M54.6', desc: 'Thoracic pain' },
+  { code: 'M25.511', desc: 'Shoulder pain' },
+  { code: 'M25.561', desc: 'Knee pain' },
+  { code: 'M79.622', desc: 'Left upper arm pain' },
+  { code: 'M79.604', desc: 'Right leg pain' },
+]
+
 const BLANK_SOAP = {
   patientId: null, date: '', time: '', visitNumber: 1,
   subjective: { complaints: [], painLevel: 5, comparedToLast: '', notes: '' },
   objective: { posture: [], muscleTension: [], romCervical: [], romLumbar: [] },
   assessment: { subluxations: [], techniques: [] },
   plan: { nextVisit: '', txPlan: '', notes: '', signature: null, dateSigned: '' },
+  cptCodes: [],
+  icd10Codes: [],
 }
 
 function Toggle({ label, active, onClick, small }) {
@@ -69,6 +105,7 @@ export default function SOAPNotes() {
   const [showPatientSearch, setShowPatientSearch] = useState(false)
   const [saved, setSaved] = useState(false)
   const [expandedNote, setExpandedNote] = useState(null)
+  const [icd10Search, setIcd10Search] = useState('')
 
   useEffect(() => {
     if (selectedPatient) {
@@ -83,6 +120,27 @@ export default function SOAPNotes() {
   const updateO = (key, val) => setForm(f => ({ ...f, objective: { ...f.objective, [key]: val } }))
   const updateA = (key, val) => setForm(f => ({ ...f, assessment: { ...f.assessment, [key]: val } }))
   const updateP = (key, val) => setForm(f => ({ ...f, plan: { ...f.plan, [key]: val } }))
+
+  const addCPT = (cpt) => {
+    const entry = `${cpt.code} - ${cpt.desc}`
+    if (!form.cptCodes.includes(entry)) {
+      setForm(f => ({ ...f, cptCodes: [...f.cptCodes, entry] }))
+    }
+  }
+  const removeCPT = (entry) => setForm(f => ({ ...f, cptCodes: f.cptCodes.filter(c => c !== entry) }))
+
+  const addICD10 = (icd) => {
+    const entry = `${icd.code} - ${icd.desc}`
+    if (!form.icd10Codes.includes(entry)) {
+      setForm(f => ({ ...f, icd10Codes: [...f.icd10Codes, entry] }))
+    }
+  }
+  const removeICD10 = (entry) => setForm(f => ({ ...f, icd10Codes: f.icd10Codes.filter(c => c !== entry) }))
+
+  const filteredICD10 = ICD10_CODES.filter(i =>
+    i.code.toLowerCase().includes(icd10Search.toLowerCase()) ||
+    i.desc.toLowerCase().includes(icd10Search.toLowerCase())
+  )
 
   const saveNote = () => {
     if (!selectedPatient) return alert('Please select a patient')
@@ -213,6 +271,58 @@ export default function SOAPNotes() {
         {/* ASSESSMENT */}
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
           <h2 className="text-lg font-semibold text-teal-400 mb-4">A — Assessment</h2>
+
+          {/* CPT Code Quick-Pick */}
+          <div className="mb-4">
+            <label className="text-sm text-gray-400 mb-2 block">CPT Code Quick-Pick</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {CPT_CODES.map(cpt => (
+                <button key={cpt.code} type="button" onClick={() => addCPT(cpt)}
+                  className="border border-teal-500 text-teal-400 text-xs rounded px-2 py-1 font-mono hover:bg-teal-900">
+                  {cpt.code}
+                </button>
+              ))}
+            </div>
+            {form.cptCodes.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {form.cptCodes.map(c => (
+                  <span key={c} className="bg-teal-900 border border-teal-600 text-teal-300 text-xs rounded px-2 py-0.5 flex items-center gap-1">
+                    {c}
+                    <button onClick={() => removeCPT(c)} className="text-teal-500 hover:text-red-400 ml-1">✕</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ICD-10 Quick-Pick */}
+          <div className="mb-4">
+            <label className="text-sm text-gray-400 mb-2 block">ICD-10 Diagnosis Codes</label>
+            <input value={icd10Search} onChange={e => setIcd10Search(e.target.value)}
+              placeholder="Search ICD-10 codes..."
+              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600 mb-2" />
+            {icd10Search && (
+              <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto mb-2">
+                {filteredICD10.map(icd => (
+                  <button key={icd.code} type="button" onClick={() => addICD10(icd)}
+                    className="border border-teal-500 text-teal-400 text-xs rounded px-2 py-1 font-mono hover:bg-teal-900">
+                    {icd.code} — {icd.desc}
+                  </button>
+                ))}
+              </div>
+            )}
+            {form.icd10Codes.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {form.icd10Codes.map(c => (
+                  <span key={c} className="bg-blue-900 border border-blue-600 text-blue-300 text-xs rounded px-2 py-0.5 flex items-center gap-1">
+                    {c}
+                    <button onClick={() => removeICD10(c)} className="text-blue-500 hover:text-red-400 ml-1">✕</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="space-y-4">
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Subluxations</label>
@@ -284,6 +394,8 @@ export default function SOAPNotes() {
                       <p><strong>Subluxations:</strong> {note.assessment?.subluxations?.join(', ')}</p>
                       <p><strong>Techniques:</strong> {note.assessment?.techniques?.join(', ')}</p>
                       <p><strong>Plan:</strong> Next visit {note.plan?.nextVisit} — {note.plan?.txPlan}</p>
+                      {note.cptCodes?.length > 0 && <p><strong>CPT:</strong> {note.cptCodes.join(', ')}</p>}
+                      {note.icd10Codes?.length > 0 && <p><strong>ICD-10:</strong> {note.icd10Codes.join(', ')}</p>}
                     </div>
                   )}
                 </div>

@@ -28,10 +28,10 @@ export default function Kiosk() {
     setFoundPatient(null); setReasons([]); setFocusAreas([]); setPain(5); setCheckedIn(false)
   }, [])
 
-  // Auto-reset after 30s inactivity
+  // Auto-reset after 60s inactivity
   useEffect(() => {
     const t = setInterval(() => {
-      if (Date.now() - lastActivity > 30000 && step > 1) reset()
+      if (Date.now() - lastActivity > 60000 && step > 1) reset()
     }, 5000)
     return () => clearInterval(t)
   }, [lastActivity, step, reset])
@@ -91,7 +91,7 @@ export default function Kiosk() {
     <div className="fixed inset-0 bg-gray-950 flex flex-col p-6 overflow-y-auto" onClick={touch}>
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="text-4xl mb-2">🦴</div>
+        <div className="text-4xl mb-2">🏥</div>
         <h1 className="text-3xl font-bold text-teal-400">Dr. Hiatt's Chiropractic</h1>
         {step > 1 && <p className="text-gray-500 text-sm mt-1">{office} Office</p>}
       </div>

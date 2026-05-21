@@ -71,9 +71,37 @@ export default function CheckInQueue() {
     </div>
   )
 
+  const REVENUE_MAP = { new: 60, existing: 40, prepay4: 140 }
+
+  const sendEODSummary = () => {
+    const completedAppts = todayAppts.filter(a => a.queueStatus === 'completed')
+    const noShowAppts = todayAppts.filter(a => a.queueStatus === 'noshow')
+    const revenue = completedAppts.reduce((sum, a) => sum + (REVENUE_MAP[a.type] || 0), 0)
+    // Count tomorrow's appointments
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const tomorrowStr = tomorrow.toISOString().split('T')[0]
+    let tomorrowCount = 0
+    Object.entries(appointments).forEach(([key, slots]) => {
+      const parts = key.split('_')
+      const date = parts.slice(1).join('_')
+      if (date === tomorrowStr) {
+        tomorrowCount += Object.values(slots || {}).filter(a => a?.status === 'booked').length
+      }
+    })
+    const msg = `📋 ChiroDesk Daily Summary — ${today}\n✅ Visits completed: ${completedAppts.length}\n💰 Revenue: $${revenue}\n❌ No-shows: ${noShowAppts.length}\n⏰ Tomorrow: ${tomorrowCount} appointments\n📝 Sent from ChiroDesk`
+    sendWhatsApp(msg)
+    alert('EOD Summary sent via WhatsApp!')
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">✅ Check-In Queue — {today}</h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-2xl font-bold">✅ Check-In Queue — {today}</h1>
+        <button onClick={sendEODSummary} className="bg-purple-700 hover:bg-purple-600 text-white text-sm px-4 py-2 rounded-lg">
+          📋 Send EOD Summary
+        </button>
+      </div>
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

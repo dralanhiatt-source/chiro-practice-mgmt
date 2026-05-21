@@ -66,6 +66,7 @@ export default function Scheduler() {
   const [noShows, setNoShows] = useLocalStorage('noShows', {})
   const [showWaitlistModal, setShowWaitlistModal] = useState(false)
   const [waitlistForm, setWaitlistForm] = useState({ name: '', phone: '', officePreference: selectedOffice })
+  const [receiptModal, setReceiptModal] = useState(null)
 
   const today = new Date()
   today.setHours(0,0,0,0)
@@ -118,6 +119,23 @@ export default function Scheduler() {
   const denyBooking = (idx) => {
     const updated = pendingBookings.map((b, i) => i === idx ? { ...b, status: 'denied' } : b)
     setPendingBookings(updated)
+  }
+
+  const generateReceipt = (appt, office, date, slot) => {
+    const price = PRICE(appt.type, date)
+    const receipt = {
+      patientName: appt.name,
+      visitDate: date,
+      visitTime: slot,
+      office,
+      type: TYPE_LABELS[appt.type],
+      amountPaid: price,
+      provider: 'Dr. Alan Hiatt DC',
+      address: office === 'Rogers' ? '1234 W Walnut St, Rogers, AR 72756' : '100 N Main St, Eureka Springs, AR 72632',
+      note: 'Services may be HSA/FSA eligible.',
+      generatedAt: new Date().toISOString(),
+    }
+    setReceiptModal(receipt)
   }
 
   const slots = selectedDate ? generateSlots(selectedOffice, selectedDate) : []
@@ -220,6 +238,8 @@ export default function Scheduler() {
                         <button onClick={(e) => { e.stopPropagation(); markNoShow(selectedOffice, selectedDate, s.time, appt.name) }}
                           className="mt-1 text-red-400 hover:text-red-300">Mark No-Show</button>
                       )}
+                      <button onClick={(e) => { e.stopPropagation(); generateReceipt(appt, selectedOffice, selectedDate, s.label) }}
+                        className="mt-1 ml-2 text-teal-400 hover:text-teal-300 text-xs">🧾 Receipt</button>
                       {noShows[`${selectedOffice}_${appt.name}`] >= 2 && (
                         <span className="ml-1 text-red-500">⛔ 2+ No-shows</span>
                       )}
@@ -321,6 +341,32 @@ export default function Scheduler() {
             <div className="flex gap-2 mt-4">
               <button onClick={() => { setWaitlist([...waitlist, waitlistForm]); setShowWaitlistModal(false); setWaitlistForm({ name: '', phone: '', officePreference: selectedOffice }) }} className="flex-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg py-2 text-sm font-medium">Add</button>
               <button onClick={() => setShowWaitlistModal(false)} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg py-2 text-sm">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Modal */}
+      {receiptModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm text-gray-900">
+            <h3 className="text-lg font-bold mb-4 text-center">🧾 Visit Receipt</h3>
+            <div className="space-y-2 text-sm border-t border-gray-200 pt-3">
+              <div className="flex justify-between"><span className="text-gray-500">Patient:</span><span className="font-medium">{receiptModal.patientName}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Visit Date:</span><span>{receiptModal.visitDate}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Time:</span><span>{receiptModal.visitTime}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Office:</span><span>{receiptModal.office}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Service:</span><span>{receiptModal.type}</span></div>
+              <div className="flex justify-between font-bold border-t border-gray-200 pt-2 mt-2"><span>Amount Paid:</span><span className="text-teal-700">${receiptModal.amountPaid}</span></div>
+            </div>
+            <div className="mt-4 text-xs text-gray-500 space-y-1">
+              <p>Provider: {receiptModal.provider}</p>
+              <p>{receiptModal.address}</p>
+              <p className="text-blue-700 font-medium">{receiptModal.note}</p>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => window.print()} className="flex-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg py-2 text-sm font-medium">🖨️ Print</button>
+              <button onClick={() => setReceiptModal(null)} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg py-2 text-sm">Close</button>
             </div>
           </div>
         </div>

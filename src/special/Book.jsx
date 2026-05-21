@@ -4,9 +4,9 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { sendWhatsApp } from '../utils/whatsapp'
 
-const OFFICES = ['Rogers', 'Eureka Springs', 'No preference']
+const OFFICES = ['Rogers, AR', 'Eureka Springs, AR']
 const DAYS = ['Wednesday', 'Friday', 'Saturday']
-const HEARD = ['Google search', 'Google Maps', 'Friend/family referral', 'Facebook', 'Instagram', 'Signage', 'Other']
+const HEARD = ['Google', 'Friend/Referral', 'Facebook', 'Instagram', 'Other']
 
 export default function Book() {
   const [searchParams] = useSearchParams()
@@ -14,7 +14,7 @@ export default function Book() {
   const [pendingBookings, setPendingBookings] = useLocalStorage('pendingBookings', [])
   const [form, setForm] = useState({
     firstName: '', lastName: '', phone: '', email: '',
-    office: initialOffice ? (initialOffice === 'rogers' ? 'Rogers' : 'Eureka Springs') : 'No preference',
+    office: initialOffice ? (initialOffice === 'rogers' ? 'Rogers, AR' : 'Eureka Springs, AR') : '',
     preferredDay: 'Wednesday', complaint: '', heardFrom: ''
   })
   const [submitted, setSubmitted] = useState(false)
@@ -33,8 +33,8 @@ export default function Book() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-gray-800">
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-gray-900">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center border border-gray-200">
           <div className="text-6xl mb-4">🎉</div>
           <h1 className="text-2xl font-bold text-teal-700 mb-3">Request Received!</h1>
           <p className="text-gray-600 mb-4">
@@ -51,56 +51,62 @@ export default function Book() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
+    <div className="min-h-screen bg-white text-gray-900 py-10 px-4">
       <div className="max-w-lg mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🦴</div>
+          <div className="text-5xl mb-3">🏥</div>
           <h1 className="text-3xl font-bold text-gray-800">Book an Appointment</h1>
           <p className="text-gray-500 mt-1">with Dr. Hiatt — Chiropractic Care</p>
         </div>
 
-        {/* QR code */}
-        <div className="flex justify-center mb-6">
-          <QRCodeSVG value={bookUrl} size={120} bgColor="#f9fafb" fgColor="#0D9488" />
+        {/* HSA/FSA Banner */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 mb-6">
+          💳 Chiropractic care is HSA and FSA eligible. Pay with your health savings card.
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-md p-6 space-y-4">
+        {/* QR code */}
+        <div className="flex justify-center mb-6">
+          <QRCodeSVG value={bookUrl} size={120} bgColor="#ffffff" fgColor="#0D9488" />
+        </div>
+
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-gray-500 block mb-1">First Name *</label>
+              <label className="block text-sm font-semibold text-gray-800 mb-1">First Name *</label>
               <input required value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500" />
+                className="w-full bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500" />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Last Name *</label>
+              <label className="block text-sm font-semibold text-gray-800 mb-1">Last Name *</label>
               <input required value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500" />
+                className="w-full bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500" />
             </div>
           </div>
 
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Phone *</label>
+            <label className="block text-sm font-semibold text-gray-800 mb-1">Phone *</label>
             <input required type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500" />
+              className="w-full bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500" />
           </div>
 
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Email</label>
+            <label className="block text-sm font-semibold text-gray-800 mb-1">Email</label>
             <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500" />
+              className="w-full bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500" />
           </div>
 
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Office Preference</label>
+            <label className="block text-sm font-semibold text-gray-800 mb-1">Office Preference</label>
             <select value={form.office} onChange={e => setForm({ ...form, office: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500">
-              {OFFICES.map(o => <option key={o}>{o}</option>)}
+              className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500">
+              <option value="">Select office</option>
+              {OFFICES.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
 
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Preferred Day</label>
+            <label className="block text-sm font-semibold text-gray-800 mb-1">Preferred Day</label>
             <div className="flex gap-2">
               {DAYS.map(d => (
                 <button key={d} type="button" onClick={() => setForm({ ...form, preferredDay: d })}
@@ -112,18 +118,18 @@ export default function Book() {
           </div>
 
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Chief Complaint</label>
+            <label className="block text-sm font-semibold text-gray-800 mb-1">Chief Complaint</label>
             <textarea value={form.complaint} onChange={e => setForm({ ...form, complaint: e.target.value })}
               placeholder="What are you coming in for?" rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 resize-none" />
+              className="w-full bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 resize-none" />
           </div>
 
           <div>
-            <label className="text-xs text-gray-500 block mb-1">How did you hear about us?</label>
+            <label className="block text-sm font-semibold text-gray-800 mb-1">How did you hear about us?</label>
             <select value={form.heardFrom} onChange={e => setForm({ ...form, heardFrom: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500">
-              <option value="">Select...</option>
-              {HEARD.map(h => <option key={h}>{h}</option>)}
+              className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500">
+              <option value="">Select one</option>
+              {HEARD.map(h => <option key={h} value={h}>{h}</option>)}
             </select>
           </div>
 
