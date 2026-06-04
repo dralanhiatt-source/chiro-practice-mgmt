@@ -3,7 +3,9 @@ import { useOutletContext } from 'react-router-dom'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { sendWhatsApp } from '../utils/whatsapp'
 
-const SLOT_COUNT = 20
+const ROGERS_SLOTS = 9   // 8:00 AM – 10:00 AM @ 15-min intervals
+const EUREKA_SLOTS = 21  // 10:45 AM – 4:00 PM @ 15-min intervals
+const SLOT_COUNT = 20    // display cap for booked-count badge
 const ALLOWED_DAYS = [3, 5, 6] // Wed, Fri, Sat
 
 function getRolling6Weeks() {
@@ -22,17 +24,17 @@ function generateSlots(office, date) {
   const slots = []
   const isRogers = office === 'Rogers'
   if (isRogers) {
-    // Backwards from 10:00 AM
-    for (let i = 0; i < SLOT_COUNT; i++) {
+    // 8:00 AM – 10:00 AM, latest slot first (backwards)
+    for (let i = 0; i < ROGERS_SLOTS; i++) {
       const totalMin = 10 * 60 - i * 15
       const h = Math.floor(totalMin / 60)
       const m = totalMin % 60
       slots.push({ time: `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`, label: `${h > 12 ? h-12 : h || 12}:${m.toString().padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}` })
     }
   } else {
-    // Forwards from 11:00 AM
-    for (let i = 0; i < SLOT_COUNT; i++) {
-      const totalMin = 11 * 60 + i * 15
+    // 10:45 AM – 4:00 PM, forwards
+    for (let i = 0; i < EUREKA_SLOTS; i++) {
+      const totalMin = 10 * 60 + 45 + i * 15
       const h = Math.floor(totalMin / 60)
       const m = totalMin % 60
       slots.push({ time: `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`, label: `${h > 12 ? h-12 : h || 12}:${m.toString().padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}` })
@@ -131,7 +133,7 @@ export default function Scheduler() {
       type: TYPE_LABELS[appt.type],
       amountPaid: price,
       provider: 'Dr. Alan Hiatt DC',
-      address: office === 'Rogers' ? '1234 W Walnut St, Rogers, AR 72756' : '100 N Main St, Eureka Springs, AR 72632',
+      address: office === 'Rogers' ? '2608 N 2nd St Ste 120, Rogers, AR 72756' : '185 E Van Buren, Eureka Springs, AR 72632',
       note: 'Services may be HSA/FSA eligible.',
       generatedAt: new Date().toISOString(),
     }
@@ -139,6 +141,7 @@ export default function Scheduler() {
   }
 
   const slots = selectedDate ? generateSlots(selectedOffice, selectedDate) : []
+  const maxSlots = selectedOffice === 'Rogers' ? ROGERS_SLOTS : EUREKA_SLOTS
   const dayAppts = selectedDate ? getAppts(selectedOffice, selectedDate) : {}
   const totalBooked = Object.values(dayAppts).filter(a => a?.status === 'booked').length
 
@@ -184,13 +187,13 @@ export default function Scheduler() {
                   isSelected ? 'border-teal-500 bg-teal-600/20 text-teal-300' :
                   isBlocked ? 'border-red-700 bg-red-900/20 text-red-400' :
                   isPast ? 'border-gray-800 bg-gray-900/50 text-gray-600' :
-                  count >= 20 ? 'border-yellow-700 bg-yellow-900/20 text-yellow-400' :
+                  count >= maxSlots ? 'border-yellow-700 bg-yellow-900/20 text-yellow-400' :
                   'border-gray-700 bg-gray-900 hover:border-teal-600 text-gray-300'
                 }`}>
                 <div className="font-medium">{dayNames[d.getDay()]}</div>
                 <div className="text-lg font-bold">{d.getDate()}</div>
                 <div>{monthNames[d.getMonth()]}</div>
-                {!isBlocked && !isPast && <div className="mt-1 text-xs">{count}/{SLOT_COUNT}</div>}
+                {!isBlocked && !isPast && <div className="mt-1 text-xs">{count}/{maxSlots}</div>}
                 {isBlocked && <div className="mt-1 text-red-400">Blocked</div>}
               </button>
             )
@@ -203,7 +206,7 @@ export default function Scheduler() {
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h2 className="font-semibold text-gray-200">
-              {selectedOffice} — {selectedDate} ({totalBooked}/{SLOT_COUNT} booked)
+              {selectedOffice} — {selectedDate} ({totalBooked}/{maxSlots} booked)
             </h2>
             <div className="flex gap-2">
               <button onClick={() => blockDate(`${selectedOffice}_${selectedDate}`)}
