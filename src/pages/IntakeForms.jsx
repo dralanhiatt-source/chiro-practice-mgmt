@@ -31,7 +31,7 @@ const BLANK = {
   referralSource: '', referralName: '',
 }
 
-export default function IntakeForms() {
+export default function IntakeForms({ standalone = false }) {
   const { t, i18n } = useTranslation()
   const [form, setForm] = useState(BLANK)
   const [patients, setPatients] = useLocalStorage('patients', [])
@@ -40,7 +40,7 @@ export default function IntakeForms() {
   const [showQR, setShowQR] = useState(false)
   const [lang, setLang] = useState('en')
 
-  const intakeUrl = `${window.location.origin}${window.location.pathname}#/intake`
+  const intakeUrl = `${window.location.origin}${window.location.pathname}#/intake-form`
 
   const toggleLang = (l) => {
     setLang(l)
@@ -121,21 +121,36 @@ export default function IntakeForms() {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold">📋 {t('intake.title')}</h1>
-        <div className="flex items-center gap-2">
-          {/* Language toggle */}
-          {['en','es'].map(l => (
-            <button key={l} onClick={() => toggleLang(l)}
-              className={`px-3 py-1 rounded text-xs font-medium uppercase ${lang === l ? 'bg-teal-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}>
-              {l}
-            </button>
-          ))}
-          {/* QR Code */}
-          <button onClick={() => setShowQR(!showQR)} className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1 rounded">📱 QR / Link</button>
+    <div className={standalone ? 'max-w-2xl mx-auto px-4 py-6 space-y-6' : 'space-y-6 max-w-3xl mx-auto'}>
+      {standalone ? (
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold text-teal-400">Dr. Alan Hiatt, DC</h1>
+          <p className="text-sm text-gray-400">New Patient Intake</p>
+          <div className="flex items-center justify-center gap-2 pt-1">
+            {['en','es'].map(l => (
+              <button key={l} type="button" onClick={() => toggleLang(l)}
+                className={`px-3 py-1 rounded text-xs font-medium uppercase ${lang === l ? 'bg-teal-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}>
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h1 className="text-2xl font-bold">📋 {t('intake.title')}</h1>
+          <div className="flex items-center gap-2">
+            {/* Language toggle */}
+            {['en','es'].map(l => (
+              <button key={l} onClick={() => toggleLang(l)}
+                className={`px-3 py-1 rounded text-xs font-medium uppercase ${lang === l ? 'bg-teal-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}>
+                {l}
+              </button>
+            ))}
+            {/* QR Code */}
+            <button onClick={() => setShowQR(!showQR)} className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1 rounded">📱 QR / Link</button>
+          </div>
+        </div>
+      )}
 
       {showQR && (
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-5 flex flex-col sm:flex-row items-center gap-6">
@@ -444,8 +459,8 @@ export default function IntakeForms() {
         </button>
       </form>
 
-      {/* Prepay tracker */}
-      {prepayList.length > 0 && (
+      {/* Prepay tracker (staff only) */}
+      {!standalone && prepayList.length > 0 && (
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 mt-6">
           <h2 className="font-semibold text-gray-300 mb-3">💳 Prepay 4-Visit Packages</h2>
           <div className="space-y-2">

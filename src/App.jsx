@@ -23,6 +23,7 @@ export default function App() {
           <Route path="/kiosk" element={<Kiosk />} />
           <Route path="/book" element={<Book />} />
           <Route path="/sign" element={<Sign />} />
+          <Route path="/intake-form" element={<IntakeForms standalone />} />
 
           {/* Main app with sidebar layout */}
           <Route path="/" element={<Layout />}>
