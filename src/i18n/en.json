@@ -27,6 +27,7 @@
   "complaint.knee": "Knee Pain",
   "complaint.foot": "Foot/Ankle Pain",
   "complaint.numbness": "Numbness/Tingling",
+  "complaint.none": "None",
   "complaint.other": "Other",
   "hipaa.title": "HIPAA Authorization",
   "hipaa.text": "I authorize Dr. Hiatt's chiropractic office to use and disclose my protected health information (PHI) for purposes of treatment, payment, and healthcare operations as permitted by the Health Insurance Portability and Accountability Act of 1996 (HIPAA). I understand I have the right to revoke this authorization in writing at any time. I acknowledge receipt of the Notice of Privacy Practices.",

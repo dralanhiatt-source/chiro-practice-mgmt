@@ -6,19 +6,27 @@ import SignatureCanvas from '../components/SignatureCanvas'
 import PainSlider from '../components/PainSlider'
 import { playSpaChime } from '../components/AudioEffects'
 import { sendWhatsApp } from '../utils/whatsapp'
+import { savePatientIntake } from '../utils/supabase'
 import '../i18n/index.js'
 
-const COMPLAINTS = ['neck','upperback','midback','lowback','headache','shoulder','hip','knee','foot','numbness','other']
+const COMPLAINTS = ['neck','upperback','midback','lowback','headache','shoulder','hip','knee','foot','numbness','none','other']
 const DURATIONS = ['Less than 1 week','1-4 weeks','1-3 months','3-6 months','6+ months']
-const CONDITIONS = ['Heart condition','Osteoporosis','Recent surgery','Cancer history','Blood thinners','Diabetes','Pregnancy','Pacemaker','None']
+const CONDITIONS = ['Heart condition','High blood pressure','Diabetes','Osteoporosis','Arthritis','Cancer','Stroke','Pacemaker','Pregnancy','Epilepsy','Anxiety/Depression','Thyroid condition','Kidney disease','Asthma','Blood thinners','None of the above','Other']
 const CAUSES = ['Auto accident','Work injury','Sports injury','Slip and fall','No specific cause','Other']
-const OFFICES = ['Rogers','Eureka Springs']
+const OFFICES = ['Rogers','Eureka']
 const REFERRAL_SOURCES = ['Google','Friend','Facebook','Instagram','Existing patient','Other']
+const WORSE = ['Sitting','Standing','Walking','Bending','Lifting','Morning','Night','Stress','None','Other']
+const BETTER = ['Rest','Heat','Ice','Movement','Medication','Stretching','None','Other']
+const MEDICATIONS = ['Blood pressure medication','Blood thinners','Diabetes medication','Thyroid medication','Antidepressants','Anti-anxiety medication','Pain medication','Anti-inflammatory (ibuprofen/naproxen)','Muscle relaxers','Steroids','Cholesterol medication','None','Other']
+const ALLERGIES = ['Penicillin','Sulfa drugs','Aspirin','Ibuprofen','Latex','Iodine','Codeine','Local anesthetics','None','Other']
+const CARE_GOALS = ['Pain relief','Improved mobility','Return to work','Return to sport/activity','Posture improvement','Preventive care','Stress relief','Better sleep','None','Other']
 
 const BLANK = {
-  firstName: '', lastName: '', dob: '', phone: '', email: '', address: '',
-  emergencyName: '', emergencyPhone: '', complaints: [], painLevel: 5,
-  duration: '', prevCare: '', medications: '', conditions: [], cause: '',
+  firstName: '', lastName: '', dobMonth: '', dobDay: '', dobYear: '', phone: '', email: '', address: '',
+  emergencyName: '', emergencyPhone: '', complaints: [], complaintOther: '', painLevel: 5,
+  worsens: [], worsenOther: '', betters: [], betterOther: '',
+  careGoals: [], careGoalOther: '',
+  duration: '', prevCare: '', medications: [], medicationOther: '', conditions: [], conditionOther: '', allergies: [], allergyOther: '', cause: '',
   hipaaSignature: null, consentText: false, office: 'Rogers', lang: 'en',
   referralSource: '', referralName: '',
 }
@@ -32,7 +40,7 @@ export default function IntakeForms() {
   const [showQR, setShowQR] = useState(false)
   const [lang, setLang] = useState('en')
 
-  const bookUrl = `${window.location.origin}${window.location.pathname}#/book`
+  const intakeUrl = `${window.location.origin}${window.location.pathname}#/intake`
 
   const toggleLang = (l) => {
     setLang(l)
@@ -42,12 +50,24 @@ export default function IntakeForms() {
 
   const toggleArr = (arr, val) => arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val]
 
+  // Toggle a checklist value. If noneVal is provided, selecting it clears all
+  // others, and selecting anything else removes noneVal.
+  const toggleGroup = (arr, val, noneVal) => {
+    if (noneVal && val === noneVal) return arr.includes(noneVal) ? [] : [noneVal]
+    const cleaned = noneVal ? arr.filter(v => v !== noneVal) : arr
+    return cleaned.includes(val) ? cleaned.filter(v => v !== val) : [...cleaned, val]
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!form.firstName || !form.lastName || !form.phone) return alert('First name, last name, and phone are required.')
 
+    const pad = (n) => String(n).padStart(2, '0')
+    const dob = form.dobYear && form.dobMonth && form.dobDay ? `${form.dobYear}-${pad(form.dobMonth)}-${pad(form.dobDay)}` : ''
+
     const patient = {
       ...form,
+      dob,
       id: Date.now(),
       submittedAt: new Date().toISOString(),
       visitCount: 0,
@@ -56,6 +76,31 @@ export default function IntakeForms() {
       totalPaid: 0,
     }
     setPatients([...patients, patient])
+
+    // Also sync to Supabase patient_intake (anon key). localStorage write above is kept.
+    const join = (arr, other) => (arr || []).map(v => (v === 'Other' || v === 'other') ? (other || 'Other') : v).filter(Boolean).join(', ')
+    savePatientIntake({
+      first_name: form.firstName,
+      last_name: form.lastName,
+      dob: dob || null,
+      phone: form.phone,
+      email: form.email || null,
+      office: form.office,
+      emergency_name: form.emergencyName || null,
+      emergency_phone: form.emergencyPhone || null,
+      chief_complaint: join(form.complaints, form.complaintOther),
+      pain_areas: (form.complaints || []).join(', '),
+      pain_scale: form.painLevel,
+      onset: form.duration || null,
+      worse_with: join(form.worsens, form.worsenOther),
+      better_with: join(form.betters, form.betterOther),
+      prior_chiro: form.prevCare || null,
+      conditions: join(form.conditions, form.conditionOther),
+      medications: join(form.medications, form.medicationOther),
+      allergies: join(form.allergies, form.allergyOther),
+      goals: join(form.careGoals, form.careGoalOther),
+      pregnant: (form.conditions || []).includes('Pregnancy') ? 'Yes' : null,
+    }).catch(err => console.error('[intake] Supabase sync failed:', err))
 
     const msg = `New patient intake submitted!\nName: ${form.firstName} ${form.lastName}\nPhone: ${form.phone}\nEmail: ${form.email}\nOffice: ${form.office}\nChief complaint: ${form.complaints.join(', ')}\nPain level: ${form.painLevel}/10\nCause: ${form.cause}`
     sendWhatsApp(msg)
@@ -94,11 +139,11 @@ export default function IntakeForms() {
 
       {showQR && (
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-5 flex flex-col sm:flex-row items-center gap-6">
-          <QRCodeSVG value={bookUrl} size={140} bgColor="#111827" fgColor="#0D9488" />
+          <QRCodeSVG value={intakeUrl} size={140} bgColor="#111827" fgColor="#0D9488" />
           <div>
-            <p className="text-sm text-gray-400 mb-2">Share this link for patient self-booking:</p>
-            <a href={bookUrl} target="_blank" rel="noreferrer" className="text-teal-400 text-sm break-all">{bookUrl}</a>
-            <button onClick={() => { navigator.clipboard.writeText(bookUrl) }} className="mt-2 block text-xs text-gray-500 hover:text-gray-300">📋 Copy URL</button>
+            <p className="text-sm text-gray-400 mb-2">Share this link for patient intake:</p>
+            <a href={intakeUrl} target="_blank" rel="noreferrer" className="text-teal-400 text-sm break-all">{intakeUrl}</a>
+            <button onClick={() => { navigator.clipboard.writeText(intakeUrl) }} className="mt-2 block text-xs text-gray-500 hover:text-gray-300">📋 Copy URL</button>
           </div>
         </div>
       )}
@@ -138,8 +183,23 @@ export default function IntakeForms() {
             </div>
             <div>
               <label className="text-xs text-gray-400 mb-1 block">{t('intake.dob')}</label>
-              <input type="date" value={form.dob} onChange={e => setForm({ ...form, dob: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600" />
+              <div className="grid grid-cols-3 gap-2">
+                <select value={form.dobMonth} onChange={e => setForm({ ...form, dobMonth: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600">
+                  <option value="">Month</option>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <select value={form.dobDay} onChange={e => setForm({ ...form, dobDay: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600">
+                  <option value="">Day</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <select value={form.dobYear} onChange={e => setForm({ ...form, dobYear: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600">
+                  <option value="">Year</option>
+                  {Array.from({ length: 2006 - 1924 + 1 }, (_, i) => 2006 - i).map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
             </div>
             <div>
               <label className="text-xs text-gray-400 mb-1 block">{t('intake.phone')} *</label>
@@ -177,11 +237,36 @@ export default function IntakeForms() {
               <label key={c} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition ${
                 form.complaints.includes(c) ? 'border-teal-500 bg-teal-900/20 text-teal-300' : 'border-gray-700 text-gray-400 hover:border-gray-500'
               }`}>
-                <input type="checkbox" checked={form.complaints.includes(c)} onChange={() => setForm({ ...form, complaints: toggleArr(form.complaints, c) })} className="accent-teal-600" />
+                <input type="checkbox" checked={form.complaints.includes(c)} onChange={() => setForm({ ...form, complaints: toggleGroup(form.complaints, c, 'none') })} className="accent-teal-600" />
                 <span className="text-sm">{t(`complaint.${c}`)}</span>
               </label>
             ))}
           </div>
+          {form.complaints.includes('other') && (
+            <input value={form.complaintOther} onChange={e => setForm({ ...form, complaintOther: e.target.value })}
+              placeholder="Please describe your complaint..."
+              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600 mt-3" />
+          )}
+        </div>
+
+        {/* Goals for Care */}
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <h2 className="font-semibold text-gray-300 mb-3">Goals for Care</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {CARE_GOALS.map(g => (
+              <label key={g} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition text-sm ${
+                form.careGoals.includes(g) ? 'border-teal-500 bg-teal-900/20 text-teal-300' : 'border-gray-700 text-gray-400 hover:border-gray-500'
+              }`}>
+                <input type="checkbox" checked={form.careGoals.includes(g)} onChange={() => setForm({ ...form, careGoals: toggleGroup(form.careGoals, g, 'None') })} className="accent-teal-600" />
+                {g}
+              </label>
+            ))}
+          </div>
+          {form.careGoals.includes('Other') && (
+            <input value={form.careGoalOther} onChange={e => setForm({ ...form, careGoalOther: e.target.value })}
+              placeholder="Please describe..."
+              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600 mt-3" />
+          )}
         </div>
 
         {/* Pain scale + duration */}
@@ -203,24 +288,95 @@ export default function IntakeForms() {
           </div>
         </div>
 
-        {/* Prev care + medications */}
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* What makes it worse / better */}
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
-            <h2 className="font-semibold text-gray-300 mb-3">{t('intake.prevCare')}</h2>
-            <div className="flex gap-3">
-              {['Yes','No'].map(v => (
-                <label key={v} className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="prevCare" checked={form.prevCare === v} onChange={() => setForm({ ...form, prevCare: v })} className="accent-teal-600" />
-                  <span className="text-sm text-gray-300">{v}</span>
+            <h2 className="font-semibold text-gray-300 mb-3">What makes it worse?</h2>
+            <div className="grid grid-cols-2 gap-2">
+              {WORSE.map(w => (
+                <label key={w} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition text-sm ${
+                  form.worsens.includes(w) ? 'border-teal-500 bg-teal-900/20 text-teal-300' : 'border-gray-700 text-gray-400 hover:border-gray-500'
+                }`}>
+                  <input type="checkbox" checked={form.worsens.includes(w)} onChange={() => setForm({ ...form, worsens: toggleGroup(form.worsens, w, 'None') })} className="accent-teal-600" />
+                  {w}
                 </label>
               ))}
             </div>
+            {form.worsens.includes('Other') && (
+              <input value={form.worsenOther} onChange={e => setForm({ ...form, worsenOther: e.target.value })}
+                placeholder="Please describe..." className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600 mt-2" />
+            )}
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-300 mb-2 block">{t('intake.medications')}</label>
-            <textarea value={form.medications} onChange={e => setForm({ ...form, medications: e.target.value })}
-              rows={3} className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600 resize-none" />
+            <h2 className="font-semibold text-gray-300 mb-3">What makes it better?</h2>
+            <div className="grid grid-cols-2 gap-2">
+              {BETTER.map(b => (
+                <label key={b} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition text-sm ${
+                  form.betters.includes(b) ? 'border-teal-500 bg-teal-900/20 text-teal-300' : 'border-gray-700 text-gray-400 hover:border-gray-500'
+                }`}>
+                  <input type="checkbox" checked={form.betters.includes(b)} onChange={() => setForm({ ...form, betters: toggleGroup(form.betters, b, 'None') })} className="accent-teal-600" />
+                  {b}
+                </label>
+              ))}
+            </div>
+            {form.betters.includes('Other') && (
+              <input value={form.betterOther} onChange={e => setForm({ ...form, betterOther: e.target.value })}
+                placeholder="Please describe..." className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600 mt-2" />
+            )}
           </div>
+        </div>
+
+        {/* Previous chiropractic care */}
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <h2 className="font-semibold text-gray-300 mb-3">{t('intake.prevCare')}</h2>
+          <div className="flex gap-3">
+            {['Yes','No'].map(v => (
+              <label key={v} className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="prevCare" checked={form.prevCare === v} onChange={() => setForm({ ...form, prevCare: v })} className="accent-teal-600" />
+                <span className="text-sm text-gray-300">{v}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Medications */}
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <h2 className="font-semibold text-gray-300 mb-3">{t('intake.medications')}</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {MEDICATIONS.map(m => (
+              <label key={m} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition text-sm ${
+                form.medications.includes(m) ? 'border-teal-500 bg-teal-900/20 text-teal-300' : 'border-gray-700 text-gray-400 hover:border-gray-500'
+              }`}>
+                <input type="checkbox" checked={form.medications.includes(m)} onChange={() => setForm({ ...form, medications: toggleGroup(form.medications, m, 'None') })} className="accent-teal-600" />
+                {m}
+              </label>
+            ))}
+          </div>
+          {form.medications.includes('Other') && (
+            <input value={form.medicationOther} onChange={e => setForm({ ...form, medicationOther: e.target.value })}
+              placeholder="Please specify..."
+              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600 mt-3" />
+          )}
+        </div>
+
+        {/* Allergies */}
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <h2 className="font-semibold text-gray-300 mb-3">Allergies</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {ALLERGIES.map(a => (
+              <label key={a} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition text-sm ${
+                form.allergies.includes(a) ? 'border-teal-500 bg-teal-900/20 text-teal-300' : 'border-gray-700 text-gray-400 hover:border-gray-500'
+              }`}>
+                <input type="checkbox" checked={form.allergies.includes(a)} onChange={() => setForm({ ...form, allergies: toggleGroup(form.allergies, a, 'None') })} className="accent-teal-600" />
+                {a}
+              </label>
+            ))}
+          </div>
+          {form.allergies.includes('Other') && (
+            <input value={form.allergyOther} onChange={e => setForm({ ...form, allergyOther: e.target.value })}
+              placeholder="Please specify..."
+              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600 mt-3" />
+          )}
         </div>
 
         {/* Medical conditions */}
@@ -231,11 +387,16 @@ export default function IntakeForms() {
               <label key={c} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition text-sm ${
                 form.conditions.includes(c) ? 'border-teal-500 bg-teal-900/20 text-teal-300' : 'border-gray-700 text-gray-400 hover:border-gray-500'
               }`}>
-                <input type="checkbox" checked={form.conditions.includes(c)} onChange={() => setForm({ ...form, conditions: toggleArr(form.conditions, c) })} className="accent-teal-600" />
+                <input type="checkbox" checked={form.conditions.includes(c)} onChange={() => setForm({ ...form, conditions: toggleGroup(form.conditions, c, 'None of the above') })} className="accent-teal-600" />
                 {c}
               </label>
             ))}
           </div>
+          {form.conditions.includes('Other') && (
+            <input value={form.conditionOther} onChange={e => setForm({ ...form, conditionOther: e.target.value })}
+              placeholder="Please specify..."
+              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600 mt-3" />
+          )}
         </div>
 
         {/* Cause */}

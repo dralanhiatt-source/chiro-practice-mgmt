@@ -27,6 +27,7 @@
   "complaint.knee": "Dolor de rodilla",
   "complaint.foot": "Dolor de pie/tobillo",
   "complaint.numbness": "Entumecimiento/Hormigueo",
+  "complaint.none": "Ninguno",
   "complaint.other": "Otro",
   "hipaa.title": "Autorización HIPAA",
   "hipaa.text": "Autorizo al consultorio quiropráctico del Dr. Hiatt a usar y divulgar mi información de salud protegida (PHI) para propósitos de tratamiento, pago y operaciones de atención médica según lo permitido por la Ley de Portabilidad y Responsabilidad de Seguros de Salud de 1996 (HIPAA). Entiendo que tengo el derecho de revocar esta autorización por escrito en cualquier momento.",

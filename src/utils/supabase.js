@@ -32,3 +32,22 @@ export async function saveConfirmedAppointment({ patient_name, phone, office, ap
   }
   return (await res.json())[0]
 }
+
+// Insert a patient intake row (anon key). Caller passes a row matching the
+// patient_intake columns. Throws on failure so callers can log it.
+export async function savePatientIntake(row) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/patient_intake`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify(row),
+  })
+  if (!res.ok) {
+    const txt = await res.text()
+    throw new Error(`patient_intake insert failed (${res.status}): ${txt}`)
+  }
+}
