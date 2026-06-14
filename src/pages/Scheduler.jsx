@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { sendWhatsApp } from '../utils/whatsapp'
+import { saveConfirmedAppointment } from '../utils/supabase'
 
 const ROGERS_SLOTS = 9   // 8:00 AM – 10:00 AM @ 15-min intervals
 const EUREKA_SLOTS = 21  // 10:45 AM – 4:00 PM @ 15-min intervals
@@ -81,7 +82,7 @@ export default function Scheduler() {
 
   const getAppts = (office, date) => appointments[getKey(office, date)] || {}
 
-  const bookSlot = () => {
+  const bookSlot = async () => {
     if (!form.name || !form.phone) return alert('Name and phone required')
     const key = getKey(modal.office, modal.date)
     const newAppts = { ...appointments, [key]: { ...(appointments[key] || {}), [modal.slot]: { ...form, status: 'booked', bookedAt: new Date().toISOString() } } }
@@ -90,6 +91,24 @@ export default function Scheduler() {
     const price = PRICE(form.type, modal.date)
     const msg = `New appointment booked!\nPatient: ${form.name}\nPhone: ${form.phone}\nOffice: ${modal.office}\nDate: ${modal.date}\nTime: ${modal.slot}\nType: ${TYPE_LABELS[form.type]} - $${price}\nRecurring: ${form.recurring}\nComplaint: ${form.complaint}`
     sendWhatsApp(msg)
+
+    // Persist a CONFIRMED appointment to Supabase so the SMS auto-confirmation
+    // workflow fires (status='confirmed', notified_patient=false). The browser
+    // runs in the clinic's local (Central) timezone, so toISOString() yields the
+    // correct UTC instant for the chosen wall-clock slot.
+    try {
+      const appointment_datetime = new Date(`${modal.date}T${modal.slot}:00`).toISOString()
+      await saveConfirmedAppointment({
+        patient_name: form.name,
+        phone: form.phone,
+        office: modal.office,
+        appointment_datetime,
+      })
+    } catch (err) {
+      console.error('[ChiroDesk] confirmed_appointments insert failed:', err)
+      alert('Booked locally, but the confirmation could not sync to the server — the patient SMS may not send.')
+    }
+
     setModal(null)
     setForm(BLANK_BOOKING)
   }
