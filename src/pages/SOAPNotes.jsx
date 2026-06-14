@@ -14,6 +14,7 @@ const ROM_LUMBAR = ['Flex','Ext','R Rotation','L Rotation','R Lat Flex','L Lat F
 const SPINE = ['C1','C2','C3','C4','C5','C6','C7','T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12','L1','L2','L3','L4','L5','Sacrum','R ilium','L ilium','Coccyx']
 const TECHNIQUES = ['Diversified','Gonstead','Pierce-Stillwagon','Pettibon','Drop table','Activator','SOT','Cox','Soft tissue','Other']
 const NEXT_VISIT = ['1 day','2 days','3 days','1 week','2 weeks','1 month','As needed']
+const CARE_FREQUENCY = ['1x/week','2x/week','3x/week','Every 2 weeks','Every 3 weeks','Every 4 weeks','As needed','Other']
 const TX_PLANS = ['Acute 3x/wk','Sub-acute 2x/wk','Maintenance 1x/wk','Wellness monthly','Custom']
 const COMPARED = ['Much better','Better','Same','Worse','Much worse','First visit']
 
@@ -56,7 +57,7 @@ const BLANK_SOAP = {
   subjective: { complaints: [], painLevel: 5, comparedToLast: '', notes: '' },
   objective: { posture: [], muscleTension: [], romCervical: [], romLumbar: [] },
   assessment: { subluxations: [], techniques: [] },
-  plan: { nextVisit: '', txPlan: '', notes: '', signature: null, dateSigned: '' },
+  plan: { nextVisit: '', careFrequency: '', careFrequencyOther: '', txPlan: '', notes: '', signature: null, dateSigned: '' },
   cptCodes: [],
   icd10Codes: [],
 }
@@ -559,6 +560,17 @@ export default function SOAPNotes() {
               <div className="flex flex-wrap gap-2">
                 {NEXT_VISIT.map(v => <Toggle key={v} label={v} active={form.plan.nextVisit === v} onClick={() => updateP('nextVisit', v)} />)}
               </div>
+            </div>
+            <div>
+              <label className="text-sm text-gray-400 mb-2 block">Frequency of Care</label>
+              <div className="flex flex-wrap gap-2">
+                {CARE_FREQUENCY.map(v => <Toggle key={v} label={v} active={form.plan.careFrequency === v} onClick={() => updateP('careFrequency', v)} />)}
+              </div>
+              {form.plan.careFrequency === 'Other' && (
+                <input value={form.plan.careFrequencyOther || ''} onChange={e => updateP('careFrequencyOther', e.target.value)}
+                  placeholder="Specify frequency..."
+                  className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600 mt-2" />
+              )}
             </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Treatment Plan</label>

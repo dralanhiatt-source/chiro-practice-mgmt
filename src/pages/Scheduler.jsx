@@ -67,6 +67,7 @@ export default function Scheduler() {
   const [modal, setModal] = useState(null) // { date, slot } or null
   const [form, setForm] = useState(BLANK_BOOKING)
   const [noShows, setNoShows] = useLocalStorage('noShows', {})
+  const [soapNotes] = useLocalStorage('soapNotes', [])
   const [showWaitlistModal, setShowWaitlistModal] = useState(false)
   const [waitlistForm, setWaitlistForm] = useState({ name: '', phone: '', officePreference: selectedOffice })
   const [receiptModal, setReceiptModal] = useState(null)
@@ -81,6 +82,16 @@ export default function Scheduler() {
   const getKey = (office, date) => `${office}_${date}`
 
   const getAppts = (office, date) => appointments[getKey(office, date)] || {}
+
+  // Latest care frequency for a booked patient, looked up from their most recent SOAP note.
+  const careFreqFor = (name) => {
+    if (!name) return ''
+    const notes = soapNotes.filter(n => n.patientName === name && n.plan?.careFrequency)
+    if (notes.length === 0) return ''
+    const latest = notes.sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || ''))[0]
+    const cf = latest.plan.careFrequency
+    return cf === 'Other' ? (latest.plan.careFrequencyOther || '') : cf
+  }
 
   const bookSlot = async () => {
     if (!form.name || !form.phone) return alert('Name and phone required')
@@ -239,6 +250,7 @@ export default function Scheduler() {
             {slots.map(s => {
               const appt = dayAppts[s.time]
               const status = appt?.status || 'available'
+              const careFreq = appt ? careFreqFor(appt.name) : ''
               return (
                 <div key={s.time}
                   className={`p-3 rounded-lg border text-xs cursor-pointer transition ${
@@ -255,6 +267,11 @@ export default function Scheduler() {
                   {appt ? (
                     <div>
                       <div className="mt-1 font-semibold truncate">{appt.name}</div>
+                      {careFreq && (
+                        <span className="inline-block mt-1 bg-teal-700/40 border border-teal-500 text-teal-200 text-[10px] rounded px-1.5 py-0.5">
+                          {careFreq}
+                        </span>
+                      )}
                       <div className="text-gray-400">{TYPE_LABELS[appt.type]}</div>
                       {appt.status !== 'noshow' && (
                         <button onClick={(e) => { e.stopPropagation(); markNoShow(selectedOffice, selectedDate, s.time, appt.name) }}
