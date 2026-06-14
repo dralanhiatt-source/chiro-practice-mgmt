@@ -232,6 +232,8 @@ export default function SOAPNotes() {
   const [sessionNote, setSessionNote] = useState({ areas: '', pressure: 'Medium', technique: '', notes: '' })
   // DAP note state (mental health)
   const [dapNote, setDapNote] = useState({ data: '', assessment: '', plan: '' })
+  // TCM note state (acupuncture)
+  const [tcmNote, setTcmNote] = useState({ tongueDiag: '', pulseDiag: '', pattern: '' })
 
   useEffect(() => {
     if (selectedPatient) {
@@ -270,7 +272,11 @@ export default function SOAPNotes() {
 
   const saveNote = () => {
     if (!selectedPatient) return alert('Please select a patient')
-    const note = { ...form, patientId: selectedPatient.id, patientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`, savedAt: new Date().toISOString() }
+    const note = { ...form, patientId: selectedPatient.id, patientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`, specialty, savedAt: new Date().toISOString() }
+    // Merge the active specialty's sub-note so it isn't lost on save.
+    if (specialty === 'massage') note.sessionNote = sessionNote
+    if (specialty === 'mental') note.dapNote = dapNote
+    if (specialty === 'acupuncture') note.tcmNote = tcmNote
     setSoapNotes([...soapNotes, note])
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
@@ -469,7 +475,7 @@ export default function SOAPNotes() {
                   {[['tongueDiag','Tongue Diagnosis'],['pulseDiag','Pulse Diagnosis'],['pattern','TCM Pattern']].map(([key, label]) => (
                     <div key={key}>
                       <label className="text-xs text-gray-400 mb-1 block">{label}</label>
-                      <input className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600" />
+                      <input value={tcmNote[key]} onChange={e => setTcmNote(n => ({ ...n, [key]: e.target.value }))} className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-600" />
                     </div>
                   ))}
                 </div>
