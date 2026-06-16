@@ -60,7 +60,7 @@ export default function IntakeForms({ standalone = false }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!form.firstName || !form.lastName || !form.phone) return alert('First name, last name, and phone are required.')
+    if (!form.firstName || !form.lastName || !form.phone || !form.consentText) return alert('First name, last name, phone, and text consent are required.')
 
     const pad = (n) => String(n).padStart(2, '0')
     const dob = form.dobYear && form.dobMonth && form.dobDay ? `${form.dobYear}-${pad(form.dobMonth)}-${pad(form.dobDay)}` : ''
@@ -449,7 +449,7 @@ export default function IntakeForms({ standalone = false }) {
           <label className="text-xs text-gray-400 mb-2 block">{t('hipaa.signature')}</label>
           <SignatureCanvas onSign={sig => setForm({ ...form, hipaaSignature: sig })} />
           <label className="flex items-center gap-2 mt-4 cursor-pointer">
-            <input type="checkbox" checked={form.consentText} onChange={e => setForm({ ...form, consentText: e.target.checked })} className="accent-teal-600" />
+            <input type="checkbox" required checked={form.consentText} onChange={e => setForm({ ...form, consentText: e.target.checked })} className="accent-teal-600" />
             <span className="text-sm text-gray-300">{t('intake.consentText')}</span>
           </label>
         </div>

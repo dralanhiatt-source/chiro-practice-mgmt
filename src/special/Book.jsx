@@ -15,7 +15,7 @@ export default function Book() {
   const [form, setForm] = useState({
     firstName: '', lastName: '', phone: '', email: '',
     office: initialOffice ? (initialOffice === 'rogers' ? 'Rogers, AR' : 'Eureka Springs, AR') : '',
-    preferredDay: 'Wednesday', complaint: '', heardFrom: ''
+    preferredDay: 'Wednesday', complaint: '', heardFrom: '', consentText: false
   })
   const [submitted, setSubmitted] = useState(false)
 
@@ -24,6 +24,7 @@ export default function Book() {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!form.firstName || !form.lastName || !form.phone) return alert('First name, last name, and phone are required.')
+    if (!form.consentText) return alert('Please agree to receive text messages to continue.')
     const booking = { ...form, status: 'pending', submittedAt: new Date().toISOString() }
     setPendingBookings([...pendingBookings, booking])
     const msg = `New booking request!\nName: ${form.firstName} ${form.lastName}\nPhone: ${form.phone}\nEmail: ${form.email}\nOffice: ${form.office}\nPreferred day: ${form.preferredDay}\nComplaint: ${form.complaint}\nHeard from: ${form.heardFrom}`
@@ -132,6 +133,11 @@ export default function Book() {
               {HEARD.map(h => <option key={h} value={h}>{h}</option>)}
             </select>
           </div>
+
+          <label className="flex items-start gap-2 cursor-pointer mt-2">
+            <input type="checkbox" required checked={form.consentText} onChange={e => setForm({ ...form, consentText: e.target.checked })} className="accent-teal-600 mt-1" />
+            <span className="text-sm text-gray-600">I agree to receive automated text messages (appointment confirmations, reminders, and updates) from Affordable Chiropractic. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out. <a href="https://chirodesk.pro/sms-terms" target="_blank" rel="noreferrer" className="underline text-teal-600">SMS Terms</a></span>
+          </label>
 
           <button type="submit"
             className="w-full bg-teal-600 hover:bg-teal-700 text-white rounded-xl py-3 font-semibold text-lg transition mt-2">

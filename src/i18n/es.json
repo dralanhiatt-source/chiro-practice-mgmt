@@ -16,7 +16,7 @@
   "intake.medications": "Medicamentos Actuales",
   "intake.conditions": "Condiciones Médicas (marque todas las que apliquen)",
   "intake.cause": "¿Qué causó su queja?",
-  "intake.consentText": "Acepto recibir mensajes de texto del consultorio del Dr. Hiatt",
+  "intake.consentText": "Acepto recibir mensajes de texto automatizados (confirmaciones de citas, recordatorios y actualizaciones) de Affordable Chiropractic. La frecuencia de mensajes varía. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para cancelar. Ver Términos de SMS.",
   "complaint.neck": "Dolor de cuello",
   "complaint.upperback": "Dolor de espalda alta",
   "complaint.midback": "Dolor de espalda media",
